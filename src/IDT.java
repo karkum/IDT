@@ -1,8 +1,9 @@
 import java.awt.Color;
+import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
-import java.awt.image.Raster;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Scanner;
 
 import javax.imageio.ImageIO;
@@ -11,9 +12,18 @@ import javax.imageio.ImageIO;
 public class IDT {
 	public static void main(String [] args) throws IOException {
 		Scanner in = new Scanner(System.in);
-		BufferedImage img = ImageIO.read(new File(in.nextLine()));
+		String modifiedFile = parseImageToBW(in.nextLine());
+		recognizeBlocks(modifiedFile);
+	}
+	/**
+	 * Takes in a png file to read. Returns a modified png file that does some edge detection.
+	 * @param fileName
+	 * @return
+	 * @throws IOException
+	 */
+	private static String parseImageToBW(String fileName) throws IOException {
+		BufferedImage img = ImageIO.read(new File(fileName));
 		BufferedImage newimg = new BufferedImage(img.getWidth(),img.getHeight(),BufferedImage.TYPE_INT_RGB );
-		Raster ras = img.getData();
 		for (int i = 1; i < img.getHeight() - 1; i++) {
 			for (int j = 1; j < img.getWidth() - 1; j++) {
 				int rgb = img.getRGB(j, i);
@@ -31,6 +41,29 @@ public class IDT {
 		}
 		File file = new File("newimg.png");
 		ImageIO.write(newimg,"png",file);
+		return file.getName();
+	}
+	
+	/**
+	 * Parses a modified image to recognize blocks of text. It looks for (or is supposed to look for)
+	 * a black pixel, and look around it to find a string of white pixels, which indicates the
+	 * end of a block.
+	 * @param fileName
+	 * @throws IOException
+	 */
+	private static void recognizeBlocks(String fileName) throws IOException {
+		BufferedImage newImg = ImageIO.read(new File("good.png")); //TODO CHANGE THIS PARAMETER
+		PrintWriter p = new PrintWriter(new File("out.txt"));
+		for (int i = 0; i < newImg.getWidth(); i++) {
+			for (int j = 0; j < newImg.getHeight(); j++) {
+				int currRGB = newImg.getRGB(i, j);
+				if (currRGB != Color.white.getRGB()) {
+					String s = "loc" + new Point2D.Double(i, j).toString() + " black\n";
+					p.write(s);
+				}
+			}
+			p.flush();
+		}
+		p.close();
 	}
 }
- 	
