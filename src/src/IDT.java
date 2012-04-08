@@ -1,4 +1,7 @@
 import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Polygon;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -9,21 +12,17 @@ import java.util.Scanner;
 
 import javax.imageio.ImageIO;
 
-
 public class IDT {
 
     static ArrayList <Point> fullList = new ArrayList<Point>();
-    static List<ArrayList<Point>> buckets;
+    
     public static void main(String [] args) throws IOException {
         Scanner in = new Scanner(System.in);
         String modifiedFile = parseImageToBW(in.nextLine());
         recognizeBlocksHorizontal(modifiedFile);
         recognizeBlocksVertical(modifiedFile);
         System.out.println("Size of full list: " + fullList.size());
-        createBoxes();
-        System.out.println(buckets.size());
-        //paintBuckets(modifiedFile);
-        
+        doGrahams();
     }
     /**
      * Takes in a png file to read. Returns a modified png file that does some edge detection.
@@ -49,7 +48,7 @@ public class IDT {
                     newimg.setRGB(j, i, Color.white.getRGB());
             }
         }
-        File file = new File("newimg1.png");
+        File file = new File("bwimg.png");
         ImageIO.write(newimg,"png",file);
         return file.getName();
     }
@@ -111,9 +110,6 @@ public class IDT {
             modImg.setRGB((int)ends.get(i).getX(), (int)ends.get(i).getY(), Color.red.getRGB());
         }
 
-        Point min = findIMin(starts);
-        System.out.println("min: " + min.getX() + "   " + min.getY());
-        modImg.setRGB((int)min.getX(), (int)min.getY(), Color.blue.getRGB());
         File file = new File("modfull.png");
         ImageIO.write(modImg,"png",file);
         fullList.addAll(starts);
@@ -177,62 +173,24 @@ public class IDT {
             modImg.setRGB((int)ends.get(i).getX(), (int)ends.get(i).getY(), Color.red.getRGB());
         }
 
-        Point min = findIMin(starts);
-        System.out.println("min: " + min.getX() + "   " + min.getY());
-        modImg.setRGB((int)min.getX(), (int)min.getY(), Color.blue.getRGB());
         File file = new File("new.png");
         ImageIO.write(modImg,"png",file);
         fullList.addAll(starts);
         fullList.addAll(ends);
     }
-
-    private static Point findIMin(List<Point> list) {
-        double minI = list.get(0).getX();
-        for (Point d : list) {
-            if (d.getX() < minI && list.get(0).getY() == d.getY()) {
-                minI = d.getX();
-            }
-        }
-        double minJ = list.get(0).getY();
-        for (Point d : list) {
-            if (d.getY() < minJ && list.get(0).getX() == d.getX()) {
-                minJ = d.getY();
-            }
-        }
-        return new Point(minI, minJ);
-    }
-    private static void createBoxes( ) {
-        int count = 0;
+    
+    @SuppressWarnings("unchecked")
+    private static void doGrahams() throws IOException {
         Collections.sort(fullList);
-        buckets = new ArrayList<ArrayList<Point>>();
-        for( int i = 0; i < fullList.size(); i++ ) {
-            Point curPoint = fullList.get(i);
-//            System.out.println(curPoint.getX() + " " + curPoint.getY());
-            boolean placed = false;
-            for ( int j = 0; j < buckets.size(); j++ ) {
-                for ( int k = buckets.get(j).size() - 1; k >= 0; k-- ){
-                    if ( buckets.get(j).get(k).distance(curPoint) < 7.0 ) {
-                        buckets.get(j).add(curPoint);
-                        placed = true;
-                    }
-                }
-            }
-            if ( !placed ) {
-//                System.out.println(count++);
-//                System.out.println(curPoint.getX() + " " + curPoint.getY());
-                ArrayList<Point> newList = new ArrayList<Point>();
-                newList.add(curPoint);
-                buckets.add(newList);
-            }
-        }
-    }
-    private static void paintBuckets( String fileName ) throws IOException {
-        BufferedImage img = ImageIO.read(new File(fileName));
-        for ( int i = 0; i < img.getWidth(); i++ ) {
-            for ( int j = 0; j < img.getHeight(); j++ ) {
-                
-            }
-        }
-        
+        ConvexHull c = new ConvexHull(fullList);
+        Polygon answer = c.grahamScan();
+        Rectangle rect = answer.getBounds();
+        BufferedImage i = ImageIO.read(new File("new.png"));
+        Graphics g = i.getGraphics();
+        g.setColor(Color.blue);
+        g.drawRect((int)rect.getX(), (int)rect.getY(), (int)rect.getWidth(), 
+                (int)rect.getHeight());
+        File file = new File("finalresult.png");
+        ImageIO.write(i,"png",file);
     }
 } 

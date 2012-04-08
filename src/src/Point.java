@@ -1,10 +1,11 @@
 import java.awt.geom.Point2D;
 
 
+@SuppressWarnings("rawtypes")
 public class Point implements Comparable {
-    private double x, y;
+    int x, y;
     
-    public Point (double a, double b) {
+    public Point (int a, int b) {
         x = a;
         y = b;
     }
@@ -12,23 +13,22 @@ public class Point implements Comparable {
     @Override
     public int compareTo(Object other) {
         Point that = (Point)other;
-        if (this.y < that.y) return -1;
         if (this.y > that.y) return +1;
         if (this.x < that.x) return -1;
         if (this.x > that.x) return +1;
         return 0;
     }
     
-    public double getX() {
+    public int getX() {
         return x;
     }
-    public double getY() {
+    public int getY() {
         return y;
     }
-    public double distance(Point other) {
+    public int distance(Point other) {
         Point2D.Double us = new Point2D.Double(x, y);
         Point2D.Double them = new Point2D.Double(other.getX(), other.getY());
-        return us.distance(them);
+        return (int) us.distance(them);
     }
     
     
