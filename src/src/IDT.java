@@ -21,6 +21,7 @@ public class IDT {
         String modifiedFile = parseImageToBW(in.nextLine());
         recognizeBlocksHorizontal(modifiedFile);
         recognizeBlocksVertical(modifiedFile);
+        
         System.out.println("Size of full list: " + fullList.size());
         doGrahams();
     }
@@ -48,6 +49,19 @@ public class IDT {
                     newimg.setRGB(j, i, Color.white.getRGB());
             }
         }
+        //Fix up the edges
+        for (int i = 0; i < img.getHeight(); i++) {
+            newimg.setRGB(0, i, Color.white.getRGB());
+        }
+        for (int i = 0; i < img.getHeight(); i++) {
+            newimg.setRGB(img.getWidth() - 1, i, Color.white.getRGB());
+        }
+        for (int i = 0; i < img.getWidth(); i++) {
+            newimg.setRGB(i, 0, Color.white.getRGB());
+        }
+        for (int i = 0; i < img.getWidth(); i++) {
+            newimg.setRGB(i, img.getHeight() - 1, Color.white.getRGB());
+        }
         File file = new File("bwimg.png");
         ImageIO.write(newimg,"png",file);
         return file.getName();
@@ -61,7 +75,7 @@ public class IDT {
      * @throws IOException
      */
     private static void recognizeBlocksHorizontal(String fileName) throws IOException {
-        BufferedImage newImg = ImageIO.read(new File("good.png")); //TODO CHANGE THIS PARAMETER
+        BufferedImage newImg = ImageIO.read(new File(fileName)); //TODO CHANGE THIS PARAMETER
         List <Point> starts = new ArrayList<Point>();
         List <Point> ends = new ArrayList<Point>();
         int whiteCount = 0;
@@ -98,7 +112,7 @@ public class IDT {
             whiteCount = 0;
         }
         //	    BufferedImage modImg = new BufferedImage(newImg.getWidth(),newImg.getHeight(),BufferedImage.TYPE_INT_RGB );
-        BufferedImage modImg = ImageIO.read(new File("good.png")); //TODO CHANGE THIS PARAMETER
+        BufferedImage modImg = ImageIO.read(new File(fileName)); //TODO CHANGE THIS PARAMETER
         System.out.println(starts.size());
         System.out.println(ends.size());
 
@@ -188,8 +202,9 @@ public class IDT {
         BufferedImage i = ImageIO.read(new File("new.png"));
         Graphics g = i.getGraphics();
         g.setColor(Color.blue);
-        g.drawRect((int)rect.getX(), (int)rect.getY(), (int)rect.getWidth(), 
-                (int)rect.getHeight());
+//        g.drawRect((int)rect.getX(), (int)rect.getY(), (int)rect.getWidth(), 
+//                (int)rect.getHeight());
+        g.drawPolygon(answer);
         File file = new File("finalresult.png");
         ImageIO.write(i,"png",file);
     }
