@@ -6,7 +6,9 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 
@@ -15,15 +17,17 @@ import javax.imageio.ImageIO;
 public class IDT {
 
     static ArrayList <Point> fullList = new ArrayList<Point>();
-    
+    static int THRESHOLD = 20;
+
     public static void main(String [] args) throws IOException {
         Scanner in = new Scanner(System.in);
         String modifiedFile = parseImageToBW(in.nextLine());
         recognizeBlocksHorizontal(modifiedFile);
         recognizeBlocksVertical(modifiedFile);
-        
+
         System.out.println("Size of full list: " + fullList.size());
-        doGrahams();
+        makeLists();
+        //doGrahams();
     }
     /**
      * Takes in a png file to read. Returns a modified png file that does some edge detection.
@@ -116,13 +120,13 @@ public class IDT {
         System.out.println(starts.size());
         System.out.println(ends.size());
 
-        for (int i = 0; i < starts.size(); i++) {
-            modImg.setRGB((int)starts.get(i).getX(), (int)starts.get(i).getY(), Color.red.getRGB());
-            //            modImg.setRGB((int)ends.get(i).getX(), (int)ends.get(i).getY(), Color.red.getRGB());
-        }
-        for (int i = 0; i < ends.size(); i++) {
-            modImg.setRGB((int)ends.get(i).getX(), (int)ends.get(i).getY(), Color.red.getRGB());
-        }
+//        for (int i = 0; i < starts.size(); i++) {
+//            modImg.setRGB((int)starts.get(i).getX(), (int)starts.get(i).getY(), Color.red.getRGB());
+//            //            modImg.setRGB((int)ends.get(i).getX(), (int)ends.get(i).getY(), Color.red.getRGB());
+//        }
+//        for (int i = 0; i < ends.size(); i++) {
+//            modImg.setRGB((int)ends.get(i).getX(), (int)ends.get(i).getY(), Color.red.getRGB());
+//        }
 
         File file = new File("modfull.png");
         ImageIO.write(modImg,"png",file);
@@ -178,21 +182,90 @@ public class IDT {
         BufferedImage modImg = ImageIO.read(new File("modfull.png")); //TODO CHANGE THIS PARAMETER
         System.out.println(starts.size());
         System.out.println(ends.size());
-
+        /*
         for (int i = 0; i < starts.size(); i++) {
             modImg.setRGB((int)starts.get(i).getX(), (int)starts.get(i).getY(), Color.red.getRGB());
             //            modImg.setRGB((int)ends.get(i).getX(), (int)ends.get(i).getY(), Color.red.getRGB());
         }
         for (int i = 0; i < ends.size(); i++) {
             modImg.setRGB((int)ends.get(i).getX(), (int)ends.get(i).getY(), Color.red.getRGB());
-        }
+        }*/
 
         File file = new File("new.png");
         ImageIO.write(modImg,"png",file);
         fullList.addAll(starts);
         fullList.addAll(ends);
     }
-    
+    @SuppressWarnings("unchecked")
+    private static void makeLists() throws IOException {
+        Collections.sort(fullList);
+
+        ArrayList <ArrayList<Point> > lists = new ArrayList<ArrayList<Point>>();
+        for ( int i = 0; i < fullList.size(); i++ ) {
+            Point curPoint = fullList.get(i);
+            boolean placed = false;
+            for ( int j = 0; j < lists.size(); j ++ ) {
+                ArrayList<Point> curList = lists.get(j);
+                for ( int k = 0; k < curList.size(); k ++ ) {
+                    if ( curList.get(k).distance(curPoint) < THRESHOLD ) {
+                        curList.add(curPoint);
+                        placed = true;
+                        break;
+                    }
+                    if ( placed )
+                        break;
+                }
+            }
+            if ( !placed ) {
+                ArrayList<Point> newList = new ArrayList<Point>();
+                newList.add(curPoint);
+                lists.add(newList);
+            }
+        }
+        BufferedImage im = ImageIO.read(new File("new.png"));
+        List<Rectangle> rects = new ArrayList<Rectangle>();
+        for ( int i = 0 ; i < lists.size(); i++) {
+            ArrayList<Point> list = lists.get(i);
+            Collections.sort(list);
+            ConvexHull c = new ConvexHull(list);
+            Polygon answer = c.grahamScan();
+            Rectangle rect = answer.getBounds();
+            rects.add(rect);
+            //Graphics g = im.getGraphics();
+            //g.setColor(Color.blue);
+            //g.drawRect((int)rect.getX(), (int)rect.getY(), (int)rect.getWidth(), 
+            // (int)rect.getHeight());
+            //        g.setColor(Color.green);
+            //        g.drawPolygon(answer);
+
+        }
+        int i = 0;
+        System.out.println(rects.size());
+        while ( i < rects.size() - 1 )
+        {
+            for ( int j = 0; j < rects.size(); j++ ) {
+                if ( rects.get(i).intersects( rects.get(j)) )
+                {
+                    Rectangle i2 = rects.remove(j);
+                    Rectangle i1 = rects.remove(i);
+                    rects.add(i, i2.union(i1));
+                    break;
+                }
+            }
+            i++;
+        }
+        System.out.println(rects.size());
+        for ( i = 0; i < rects.size(); i++ ) {
+            Rectangle rect = rects.get(i);
+            Graphics g = im.getGraphics();
+            g.setColor(Color.blue);
+            g.drawRect((int)rect.getX(), (int)rect.getY(), (int)rect.getWidth(), 
+                    (int)rect.getHeight());
+        }
+        File file = new File("finalresult.png");
+        ImageIO.write(im,"png",file);
+    }
+
     @SuppressWarnings("unchecked")
     private static void doGrahams() throws IOException {
         Collections.sort(fullList);
@@ -202,8 +275,9 @@ public class IDT {
         BufferedImage i = ImageIO.read(new File("new.png"));
         Graphics g = i.getGraphics();
         g.setColor(Color.blue);
-//        g.drawRect((int)rect.getX(), (int)rect.getY(), (int)rect.getWidth(), 
-//                (int)rect.getHeight());
+        g.drawRect((int)rect.getX(), (int)rect.getY(), (int)rect.getWidth(), 
+                (int)rect.getHeight());
+        g.setColor(Color.green);
         g.drawPolygon(answer);
         File file = new File("finalresult.png");
         ImageIO.write(i,"png",file);
