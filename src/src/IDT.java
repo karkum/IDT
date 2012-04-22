@@ -17,7 +17,7 @@ import javax.imageio.ImageIO;
 public class IDT {
 
     static ArrayList <Point> fullList = new ArrayList<Point>();
-    static int THRESHOLD = 20;
+    static int THRESHOLD = 5;
 
     public static void main(String [] args) throws IOException {
         Scanner in = new Scanner(System.in);
@@ -120,13 +120,13 @@ public class IDT {
         System.out.println(starts.size());
         System.out.println(ends.size());
 
-//        for (int i = 0; i < starts.size(); i++) {
-//            modImg.setRGB((int)starts.get(i).getX(), (int)starts.get(i).getY(), Color.red.getRGB());
-//            //            modImg.setRGB((int)ends.get(i).getX(), (int)ends.get(i).getY(), Color.red.getRGB());
-//        }
-//        for (int i = 0; i < ends.size(); i++) {
-//            modImg.setRGB((int)ends.get(i).getX(), (int)ends.get(i).getY(), Color.red.getRGB());
-//        }
+        //        for (int i = 0; i < starts.size(); i++) {
+        //            modImg.setRGB((int)starts.get(i).getX(), (int)starts.get(i).getY(), Color.red.getRGB());
+        //            //            modImg.setRGB((int)ends.get(i).getX(), (int)ends.get(i).getY(), Color.red.getRGB());
+        //        }
+        //        for (int i = 0; i < ends.size(); i++) {
+        //            modImg.setRGB((int)ends.get(i).getX(), (int)ends.get(i).getY(), Color.red.getRGB());
+        //        }
 
         File file = new File("modfull.png");
         ImageIO.write(modImg,"png",file);
@@ -226,6 +226,8 @@ public class IDT {
         List<Rectangle> rects = new ArrayList<Rectangle>();
         for ( int i = 0 ; i < lists.size(); i++) {
             ArrayList<Point> list = lists.get(i);
+            if ( list.size() <= 50 )
+                continue;
             Collections.sort(list);
             ConvexHull c = new ConvexHull(list);
             Polygon answer = c.grahamScan();
@@ -239,20 +241,29 @@ public class IDT {
             //        g.drawPolygon(answer);
 
         }
+
         int i = 0;
         System.out.println(rects.size());
-        while ( i < rects.size() - 1 )
-        {
-            for ( int j = 0; j < rects.size(); j++ ) {
-                if ( rects.get(i).intersects( rects.get(j)) )
-                {
-                    Rectangle i2 = rects.remove(j);
-                    Rectangle i1 = rects.remove(i);
-                    rects.add(i, i2.union(i1));
-                    break;
+        while ( i < rects.size()  )
+        {   
+            boolean flag = false;
+            int j = 0;
+            while ( j < rects.size()  ) {
+                if ( j == i) {
+                    j++;
+                    continue;
                 }
+                else if ( rects.get(i).intersects( rects.get(j)) )
+                {
+                    Rectangle r = rects.remove(j);
+                    rects.set(i, rects.get(i).union(r));
+                    flag = true;
+                    continue;
+                }
+                j++;
             }
-            i++;
+            if ( !flag )
+                i++;
         }
         System.out.println(rects.size());
         for ( i = 0; i < rects.size(); i++ ) {
