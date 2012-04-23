@@ -69,7 +69,11 @@ public class IDT {
         System.out.println("DONE");
 
         System.out.print("Grouping blocks of black pixels into rectangles...");
-        ArrayList<ArrayList<Point>> groups = makeLists(srcFilename);
+        ArrayList<Rectangle> groups = makeLists(srcFilename);
+        System.out.println("DONE");
+        
+        System.out.print("Removing irrelvant small rectangles...");
+        removeStatic(groups);
         System.out.println("DONE");
 
         System.out.print("Merging rectangles...");
@@ -238,48 +242,38 @@ public class IDT {
      * @return ArrayList<ArrayList<Point>> the list of list of points
      */
     @SuppressWarnings("unchecked")
-    private static ArrayList<ArrayList<Point>> makeLists(String modifiedFile) {
+    private static ArrayList<Rectangle> makeLists(String modifiedFile) {
         Collections.sort(fullList);
-        ArrayList<ArrayList<Point>> lists = new ArrayList<ArrayList<Point>>();
+        ArrayList<Rectangle> lists = new ArrayList<Rectangle>();
         for (int i = 0; i < fullList.size(); i++) {
             Point curPoint = fullList.get(i);
             boolean placed = false;
             for (int j = 0; j < lists.size(); j++) {
-                ArrayList<Point> curList = lists.get(j);
-                for (int k = 0; k < curList.size(); k++) {
-                    if (curList.get(k).distance(curPoint) < THRESHOLD) {
-                        curList.add(curPoint);
-                        placed = true;
-                        break;
-                    }
-                    if (placed)
-                        break;
+                Rectangle r = lists.get(j);
+                if ( distanceFromRect( curPoint, r) < THRESHOLD ) {
+                    r.add( curPoint );
+                    placed = true;
+                    break;
                 }
             }
             if (!placed) {
-                ArrayList<Point> newList = new ArrayList<Point>();
-                newList.add(curPoint);
-                lists.add(newList);
+                Rectangle newRect = new Rectangle(curPoint);
+                lists.add(newRect);
             }
         }
         return lists;
     }
-
-    @SuppressWarnings("unchecked")
-    private static List<Rectangle> mergeRectangles(
-            ArrayList<ArrayList<Point>> lists) {
-        List<Rectangle> rects = new ArrayList<Rectangle>();
-        for (int i = 0; i < lists.size(); i++) {
-            ArrayList<Point> list = lists.get(i);
-            if (list.size() <= 50)
-                continue;
-            Collections.sort(list);
-            ConvexHull c = new ConvexHull(list);
-            Polygon answer = c.grahamScan();
-            Rectangle rect = answer.getBounds();
-            rects.add(rect);
+    private static void removeStatic(ArrayList<Rectangle> rects) {
+        int i = 0;
+        while ( i < rects.size()) {
+            if ( rects.get(i).width * rects.get(i).height < THRESHOLD )
+                rects.remove(i);
+            else
+                i++;
         }
-
+    }
+    private static List<Rectangle> mergeRectangles(
+            ArrayList<Rectangle> rects) {
         int i = 0;
         while (i < rects.size()) {
             boolean flag = false;
@@ -337,5 +331,26 @@ public class IDT {
             }
             buf.close();
         }
+    }
+    public static double distanceFromRect( Point p, Rectangle r) {
+        if ( r.contains( p ) )
+            return 0.0;
+        double hdistance = 0;
+        double vdistance = 0;
+        
+        //check for hdistance
+        if ( p.getX() > r.getMaxX() )
+            hdistance = p.getX() - r.getMaxX();
+        else if ( p.getX() < r.getMinX() )
+            hdistance = r.getMinX() - p.getX();
+        
+      //check for vdistance
+        if ( p.getY() > r.getMaxY() )
+            vdistance = p.getY() - r.getMaxY();
+        else if ( p.getY() < r.getMinY() )
+            vdistance = r.getMinY() - p.getY();
+            
+        
+        return Math.sqrt( hdistance * hdistance + vdistance * vdistance );
     }
 }

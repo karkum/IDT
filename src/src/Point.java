@@ -6,10 +6,9 @@ import java.awt.geom.Point2D;
  * between two points.
  */
 @SuppressWarnings("rawtypes")
-public class Point implements Comparable {
+public class Point 
+    extends java.awt.Point implements Comparable {
     
-    /* The x and y coordinates of this point*/
-    private int x, y;
     
     /**
      * Constructor. Creates a point object given the x and y coordinates. 
@@ -36,20 +35,6 @@ public class Point implements Comparable {
         if (this.x < that.x) return -1;
         if (this.x > that.x) return +1;
         return 0;
-    }
-    
-    /**
-     * @return x Return the x point
-     */
-    public int getX() {
-        return x;
-    }
-    
-    /**
-     * @return y Return the y point
-     */
-    public int getY() {
-        return y;
     }
     
     /**

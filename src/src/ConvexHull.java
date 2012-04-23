@@ -65,8 +65,8 @@ public class ConvexHull {
     }
 
     public long distance2(Point a, Point b) {
-        return (b.getX() - a.getX()) * (b.getX() - a.getX())
-                + (b.getY() - a.getY()) * (b.getY() - a.getY());
+        return (long) ((b.getX() - a.getX()) * (b.getX() - a.getX())
+                + (b.getY() - a.getY()) * (b.getY() - a.getY()));
     }
 
     public int ccw(Point p1, Point p2, Point p3) {
