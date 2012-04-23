@@ -2,9 +2,9 @@ import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Polygon;
 import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
+import java.awt.image.Raster;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -25,8 +25,6 @@ import javax.imageio.ImageIO;
  */
 public class IDT {
 
-    /* This list will hold the points after recognizing blocks. */
-    static ArrayList<Point> fullList = new ArrayList<Point>();
     static int THRESHOLD = 5;
     static final int WHITECOUNT = 4;
 
@@ -57,19 +55,21 @@ public class IDT {
         }
         System.out.println("Reading file: " + srcFilename + "...DONE");
         System.out.print("Converting file to black and white...");
-        String modifiedFile = parseImageToBW(srcFilename);
+
+        BufferedImage img = ImageIO.read(new File(srcFilename));
+        BufferedImage newImg  = parseImageToBW(img);
         System.out.println("DONE");
 
         System.out.print("Recognizing blocks of black pixels horizonally...");
-        recognizeBlocksHorizontal(modifiedFile);
+        List<Point> points = recognizeBlocksHorizontal(newImg);
         System.out.println("DONE");
 
         System.out.print("Recognizing blocks of black pixels vertically...");
-        recognizeBlocksVertical(modifiedFile);
+        points.addAll(recognizeBlocksVertical(newImg));
         System.out.println("DONE");
 
         System.out.print("Grouping blocks of black pixels into rectangles...");
-        ArrayList<Rectangle> groups = makeLists(srcFilename);
+        ArrayList<Rectangle> groups = makeLists(srcFilename, points);
         System.out.println("DONE");
         
         System.out.print("Removing irrelvant small rectangles...");
@@ -77,7 +77,15 @@ public class IDT {
         System.out.println("DONE");
 
         System.out.print("Merging rectangles...");
-        List<Rectangle> rects = mergeRectangles(groups);
+        ArrayList<Rectangle> rects = mergeRectangles(groups);
+        System.out.println("DONE");
+        
+        System.out.print("Parsing Subimages...");
+        rects = parseSubimages(rects, srcFilename);
+        System.out.println("DONE");
+        
+        System.out.print("Removing small rectangles AGAIN...");
+        removeStatic(rects);
         System.out.println("DONE");
 
         System.out.print("Outputting result to file " + destFileName + "...");
@@ -112,8 +120,7 @@ public class IDT {
      * @return String the name of the modified file.
      * @throws IOException
      */
-    private static String parseImageToBW(String fileName) throws IOException {
-        BufferedImage img = ImageIO.read(new File(fileName));
+    private static BufferedImage parseImageToBW(BufferedImage img) throws IOException {
         BufferedImage newimg = new BufferedImage(img.getWidth(),
                 img.getHeight(), BufferedImage.TYPE_INT_RGB);
         for (int i = 1; i < img.getHeight() - 1; i++) {
@@ -144,10 +151,7 @@ public class IDT {
         for (int i = 0; i < img.getWidth(); i++) {
             newimg.setRGB(i, img.getHeight() - 1, Color.white.getRGB());
         }
-        File file = new File("bwimg.png");
-        file.deleteOnExit();
-        ImageIO.write(newimg, "png", file);
-        return file.getName();
+        return newimg;
     }
 
     /**
@@ -155,13 +159,12 @@ public class IDT {
      * pixel, and look around it to find a string of white pixels, which
      * indicates the end of a block.
      * 
-     * @param fileName
+     * @param img
      *            the file to parse
      * @throws IOException
      */
-    private static void recognizeBlocksHorizontal(String fileName)
+    private static List<Point> recognizeBlocksHorizontal(BufferedImage newImg)
             throws IOException {
-        BufferedImage newImg = ImageIO.read(new File(fileName));
         List<Point> starts = new ArrayList<Point>();
         List<Point> ends = new ArrayList<Point>();
         int whiteCount = 0;
@@ -188,8 +191,8 @@ public class IDT {
             }
             whiteCount = 0;
         }
-        fullList.addAll(starts);
-        fullList.addAll(ends);
+        starts.addAll(ends);
+        return starts;
     }
 
     /**
@@ -200,9 +203,8 @@ public class IDT {
      * @param fileName
      * @throws IOException
      */
-    private static void recognizeBlocksVertical(String fileName)
+    private static List<Point> recognizeBlocksVertical(BufferedImage newImg)
             throws IOException {
-        BufferedImage newImg = ImageIO.read(new File(fileName));
         List<Point> starts = new ArrayList<Point>();
         List<Point> ends = new ArrayList<Point>();
         int whiteCount = 0;
@@ -229,8 +231,8 @@ public class IDT {
             }
             whiteCount = 0;
         }
-        fullList.addAll(starts);
-        fullList.addAll(ends);
+        starts.addAll(ends);
+        return starts;
     }
 
     /**
@@ -242,7 +244,7 @@ public class IDT {
      * @return ArrayList<ArrayList<Point>> the list of list of points
      */
     @SuppressWarnings("unchecked")
-    private static ArrayList<Rectangle> makeLists(String modifiedFile) {
+    private static ArrayList<Rectangle> makeLists(String modifiedFile, List<Point> fullList) {
         Collections.sort(fullList);
         ArrayList<Rectangle> lists = new ArrayList<Rectangle>();
         for (int i = 0; i < fullList.size(); i++) {
@@ -271,25 +273,26 @@ public class IDT {
     private static void removeStatic(ArrayList<Rectangle> rects) {
         int i = 0;
         while ( i < rects.size()) {
-            if ( rects.get(i).width * rects.get(i).height < THRESHOLD )
+            if ( rects.get(i).width * rects.get(i).height < 50 )
                 rects.remove(i);
             else
                 i++;
         }
     }
-    private static List<Rectangle> mergeRectangles(
+    private static ArrayList<Rectangle> mergeRectangles(
             ArrayList<Rectangle> rects) {
         int i = 0;
         while (i < rects.size()) {
             boolean flag = false;
-            int j = 0;
+            int j = i;
             while (j < rects.size()) {
                 if (j == i) {
                     j++;
                     continue;
                 } else if (rects.get(i).intersects(rects.get(j))) {
-                    Rectangle r = rects.remove(j);
-                    rects.set(i, rects.get(i).union(r));
+                    Rectangle r1 = rects.get(i);
+                    Rectangle r2 = rects.remove(j);
+                    rects.set(i, r1.union(r2));
                     flag = true;
                     continue;
                 }
@@ -297,6 +300,37 @@ public class IDT {
             }
             if (!flag)
                 i++;
+        }
+        return rects;
+    }
+    
+    private static ArrayList<Rectangle> parseSubimages(List<Rectangle> rects,
+            String srcFilename) throws IOException {
+        ArrayList<Rectangle> rectsOnRects = new ArrayList<Rectangle>();
+        for ( int i = 0; i < rects.size(); i++ ) {
+            List<Rectangle> newList = parseSubimage(rects.get(i), srcFilename);
+            if ( newList != null && newList.size() > 2 )
+                rectsOnRects.addAll( parseSubimages( newList, srcFilename) );
+            else
+                rectsOnRects.add(rects.get(i));
+        }
+        return rectsOnRects;
+    }
+    
+    private static List<Rectangle> parseSubimage( Rectangle r, String srcFilename) throws IOException {
+        if ( r.height  < 5 || r.width < 5 )
+            return null;
+        BufferedImage im = ImageIO.read(new File(srcFilename));
+        BufferedImage i2 = im.getSubimage( r.x + 2, r.y + 2, r.width - 4, r.height - 4 );
+        BufferedImage img = parseImageToBW(i2);
+        List<Point> points = recognizeBlocksHorizontal(img);
+        points.addAll(recognizeBlocksVertical(img));
+        ArrayList<Rectangle> groups = makeLists(srcFilename, points);
+        removeStatic(groups);
+        List<Rectangle> rects = mergeRectangles(groups);
+        for ( int i = 0; i < rects.size(); i++ ) {
+            rects.get(i).x += r.x + 2;
+            rects.get(i).y += r.y + 2;
         }
         return rects;
     }
@@ -318,7 +352,7 @@ public class IDT {
                 Rectangle rect = rects.get(i);
                 Graphics g = im.getGraphics();
                 Graphics2D gr = (Graphics2D) g;
-                gr.setStroke(new BasicStroke((float) 5.0));
+                gr.setStroke(new BasicStroke((float) 3.0));
                 gr.setColor(Color.magenta);
                 gr.drawRect((int) rect.getX(), (int) rect.getY(),
                         (int) rect.getWidth(), (int) rect.getHeight());
