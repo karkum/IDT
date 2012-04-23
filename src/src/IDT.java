@@ -81,7 +81,7 @@ public class IDT {
         System.out.println("DONE");
 
         System.out.print("Outputting result to file " + destFileName + "...");
-        doOutput(modifiedFile, destFileName, rects, visualFlag);
+        doOutput(srcFilename, destFileName, rects, visualFlag);
         System.out.println("DONE");
 
         long estimatedTime = System.currentTimeMillis() - startTime;
@@ -250,7 +250,12 @@ public class IDT {
             boolean placed = false;
             for (int j = 0; j < lists.size(); j++) {
                 Rectangle r = lists.get(j);
-                if ( distanceFromRect( curPoint, r) < THRESHOLD ) {
+                double d = distanceFromRect( curPoint, r);
+                if ( d == 0 ) {
+                    placed = true;
+                    break;
+                }
+                else if ( d < THRESHOLD ) {
                     r.add( curPoint );
                     placed = true;
                     break;
@@ -305,9 +310,9 @@ public class IDT {
      * @param visualFlag
      * @throws IOException
      */
-    private static void doOutput(String modifiedFile, String destFileName,
+    private static void doOutput(String sourceFile, String destFileName,
             List<Rectangle> rects, boolean visualFlag) throws IOException {
-        BufferedImage im = ImageIO.read(new File(modifiedFile));
+        BufferedImage im = ImageIO.read(new File(sourceFile));
         if (visualFlag) {
             for (int i = 0; i < rects.size(); i++) {
                 Rectangle rect = rects.get(i);
